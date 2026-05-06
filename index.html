@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestor de Solicitudes — Municipalidad de Maipú</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface2: #f9f8f5;
+  --border: #e2dfd8;
+  --border2: #ccc9c0;
+  --text: #1a1917;
+  --text2: #6b6860;
+  --text3: #9e9b94;
+  --accent: #1d4ed8;
+  --accent-bg: #eff4ff;
+  --green: #166534;
+  --green-bg: #dcfce7;
+  --amber: #92400e;
+  --amber-bg: #fef3c7;
+  --red: #991b1b;
+  --red-bg: #fee2e2;
+  --blue: #1e40af;
+  --blue-bg: #dbeafe;
+  --gray: #374151;
+  --gray-bg: #f3f4f6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+a { color: var(--accent); }
+
+/* Layout */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 10; }
+.main { margin-left: 240px; flex: 1; padding: 2rem; }
+
+/* Sidebar */
+.sidebar-logo { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid var(--border); }
+.sidebar-logo .muni { font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.sidebar-logo .app-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.sidebar-nav { padding: 1rem 0.75rem; flex: 1; }
+.nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); padding: 0 0.5rem; margin: 1rem 0 0.4rem; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 14px; color: var(--text2); cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--red-bg); color: var(--red); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 20px; }
+.sidebar-bottom { padding: 1rem; border-top: 1px solid var(--border); }
+.user-row { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.user-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.user-email { font-size: 11px; color: var(--text3); }
+
+/* Header */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 12px; }
+.page-title { font-size: 22px; font-weight: 600; color: var(--text); }
+.page-subtitle { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; font-family: 'DM Sans', sans-serif; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #1e40af; }
+.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border2); }
+.btn-secondary:hover { background: var(--surface2); }
+.btn-danger { background: var(--red-bg); color: var(--red); border-color: #fca5a5; }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 5px 11px; font-size: 13px; }
+.btn svg { width: 15px; height: 15px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.75rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+.stat-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; font-weight: 500; }
+.stat-value { font-size: 26px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+.stat-value.c-amber { color: var(--amber); }
+.stat-value.c-blue { color: var(--blue); }
+.stat-value.c-green { color: var(--green); }
+.stat-value.c-red { color: var(--red); }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; }
+.toolbar input, .toolbar select { font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 8px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+.toolbar input { flex: 1; min-width: 200px; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+
+/* Tickets */
+.tickets { display: flex; flex-direction: column; gap: 8px; }
+.ticket { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow); }
+.ticket:hover { border-color: var(--border2); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.ticket.is-urgent { border-left: 3px solid #ef4444; }
+.ticket.is-done { opacity: 0.65; }
+.ticket-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ticket-info { flex: 1; min-width: 0; }
+.ticket-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+.ticket-id { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+.ticket-name { font-size: 15px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket-email { font-size: 13px; color: var(--text2); margin-top: 1px; }
+.ticket-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; gap: 6px; }
+.ticket-dept { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+.ticket-date { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.ticket-source { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 4px; }
+
+/* Pills */
+.pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; letter-spacing: 0.02em; }
+.pill-pending { background: var(--amber-bg); color: var(--amber); }
+.pill-progress { background: var(--blue-bg); color: var(--blue); }
+.pill-done { background: var(--green-bg); color: var(--green); }
+.pill-urgent { background: var(--red-bg); color: var(--red); }
+.pill-cancelled { background: var(--gray-bg); color: var(--gray); }
+.pill-auto { background: #ede9fe; color: #5b21b6; }
+
+/* Check button */
+.check-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+.check-btn:hover { border-color: var(--green); background: var(--green-bg); }
+.check-btn.checked { border-color: var(--green); background: var(--green-bg); }
+.check-btn svg { width: 14px; height: 14px; color: var(--green); }
+
+/* Empty */
+.empty { text-align: center; padding: 4rem 1rem; color: var(--text3); }
+.empty svg { width: 40px; height: 40px; margin: 0 auto 12px; opacity: 0.4; display: block; }
+.empty p { font-size: 14px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-md); transform: translateY(8px); transition: transform 0.2s; }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header { padding: 1.25rem 1.5rem 0; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h2 { font-size: 16px; font-weight: 600; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--text3); padding: 4px; border-radius: 4px; }
+.modal-close:hover { color: var(--text); background: var(--surface2); }
+.modal-body { padding: 1.25rem 1.5rem 1.5rem; }
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+.field input, .field select, .field textarea { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { min-height: 80px; resize: vertical; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-footer { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--surface2); border-radius: 0 0 14px 14px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+/* Sync banner */
+.sync-bar { background: var(--blue-bg); border: 1px solid #93c5fd; border-radius: var(--radius); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; font-size: 13px; color: var(--blue); }
+.sync-bar svg { width: 16px; height: 16px; flex-shrink: 0; }
+.sync-bar .sync-time { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 12px; color: #3b82f6; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Config panel */
+.config-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+.config-section h3 { font-size: 14px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+.config-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.config-row:last-child { border-bottom: none; }
+.config-key { font-size: 13px; color: var(--text2); }
+.config-val { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 12px; }
+.tag button { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; line-height: 1; padding: 0; }
+.tag button:hover { color: var(--red); }
+.toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--text); color: #fff; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md); z-index: 999; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="muni">Municipalidad de Maipú</div>
+      <div class="app-name">Gestor de Correos</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="showPage('tickets')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Solicitudes
+        <span class="nav-badge" id="badge-pending">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('config')">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Configuración
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-row">
+        <div class="user-avatar">JN</div>
+        <div>
+          <div class="user-name">J. Navarro</div>
+          <div class="user-email">jnavarroh@maipu.cl</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- TICKETS PAGE -->
+    <div id="page-tickets">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Solicitudes de correo</div>
+          <div class="page-subtitle">Gestión de cuentas de correo electrónico municipal</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="syncMail()" id="sync-btn">
+            <svg id="sync-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            Revisar correo
+          </button>
+          <button class="btn btn-primary" onclick="openModal('new')">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva solicitud
+          </button>
+        </div>
+      </div>
+
+      <div id="sync-bar" style="display:none" class="sync-bar">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.05 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z"/></svg>
+        <span id="sync-msg">Revisando bandeja de entrada...</span>
+        <span class="sync-time" id="sync-time"></span>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="s-total">0</div></div>
+        <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value c-amber" id="s-pending">0</div></div>
+        <div class="stat-card"><div class="stat-label">En proceso</div><div class="stat-value c-blue" id="s-progress">0</div></div>
+        <div class="stat-card"><div class="stat-label">Completadas</div><div class="stat-value c-green" id="s-done">0</div></div>
+        <div class="stat-card"><div class="stat-label">Urgentes</div><div class="stat-value c-red" id="s-urgent">0</div></div>
+        <div class="stat-card"><div class="stat-label">Desde correo</div><div class="stat-value" style="color:#5b21b6" id="s-auto">0</div></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Buscar por nombre, correo, departamento..." oninput="renderTickets()" />
+        <select id="f-status" onchange="renderTickets()">
+          <option value="">Todos los estados</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="En proceso">En proceso</option>
+          <option value="Completada">Completada</option>
+          <option value="Urgente">Urgente</option>
+          <option value="Cancelada">Cancelada</option>
+        </select>
+        <select id="f-dept" onchange="renderTickets()">
+          <option value="">Todos los depto.</option>
+        </select>
+        <select id="f-source" onchange="renderTickets()">
+          <option value="">Todas las fuentes</option>
+          <option value="manual">Manual</option>
+          <option value="email">Desde correo</option>
+        </select>
+      </div>
+
+      <div class="tickets" id="ticket-list"></div>
+    </div>
+
+    <!-- CONFIG PAGE -->
+    <div id="page-config" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Configuración</div>
+          <div class="page-subtitle">Conexión con Microsoft 365 y preferencias</div>
+        </div>
+        <button class="btn btn-primary" onclick="saveConfig()">Guardar cambios</button>
+      </div>
+
+      <div class="config-section">
+        <h3>Credenciales Microsoft Graph</h3>
+        <div class="field"><label>Tenant ID</label><input id="cfg-tenant" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>
+        <div class="field"><label>Client ID</label><input id="cfg-client" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>
+        <div class="field"><label>Client Secret</label><input id="cfg-secret" type="password" placeholder="••••••••••••••••••••" /></div>
+        <div class="field"><label>Correo a monitorear</label><input id="cfg-email" type="text" placeholder="jnavarroh@maipu.cl" /></div>
+        <button class="btn btn-secondary btn-sm" onclick="testConnection()" style="margin-top:4px">Probar conexión</button>
+      </div>
+
+      <div class="config-section">
+        <h3>Palabras clave para detectar solicitudes</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Si un correo contiene alguna de estas palabras en el asunto, se crea un ticket automáticamente.</p>
+        <div class="tag-list" id="keywords-list"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input id="new-keyword" type="text" placeholder="nueva palabra clave..." style="font-size:13px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);outline:none;flex:1" />
+          <button class="btn btn-secondary btn-sm" onclick="addKeyword()">Agregar</button>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>Estado actual</h3>
+        <div class="config-row"><span class="config-key">Tenant ID</span><span class="config-val" id="disp-tenant">—</span></div>
+        <div class="config-row"><span class="config-key">Client ID</span><span class="config-val" id="disp-client">—</span></div>
+        <div class="config-row"><span class="config-key">Correo</span><span class="config-val" id="disp-email">—</span></div>
+        <div class="config-row"><span class="config-key">Última sincronización</span><span class="config-val" id="disp-sync">Nunca</span></div>
+        <div class="config-row"><span class="config-key">Tickets desde correo</span><span class="config-val" id="disp-auto">0</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal: Nueva solicitud / Detalle -->
+<div class="modal-overlay" id="modal-new-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Nueva solicitud</h2>
+      <button class="modal-close" onclick="closeModal('new')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>Nombre completo *</label><input id="n-name" type="text" placeholder="Juan Pérez Soto" /></div>
+        <div class="field"><label>RUT / N° funcionario</label><input id="n-rut" type="text" placeholder="12.345.678-9" /></div>
+      </div>
+      <div class="field"><label>Correo solicitado *</label><input id="n-email" type="text" placeholder="jperez@maipu.cl" /></div>
+      <div class="field-row">
+        <div class="field"><label>Departamento *</label><input id="n-dept" type="text" placeholder="Obras Públicas" /></div>
+        <div class="field"><label>Solicitado por</label><input id="n-req" type="text" placeholder="Director de RRHH" /></div>
+      </div>
+      <div class="field"><label>Prioridad</label>
+        <select id="n-priority">
+          <option value="Pendiente">Normal</option>
+          <option value="Urgente">Urgente</option>
+          <option value="En proceso">En proceso</option>
+        </select>
+      </div>
+      <div class="field"><label>Notas</label><textarea id="n-notes" placeholder="Observaciones, accesos especiales, fecha de ingreso..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('new')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNew()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        Guardar solicitud
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-detail-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="d-title">Detalle</h2>
+      <button class="modal-close" onclick="closeModal('detail')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">ID</div><div style="font-family:'DM Mono',monospace;font-size:13px" id="d-id"></div></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Fecha</div><div style="font-size:13px" id="d-date"></div></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">RUT / N°</div><div style="font-size:13px" id="d-rut"></div></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Fuente</div><div id="d-source"></div></div>
+      </div>
+      <div class="field"><label>Correo solicitado</label><input id="d-email" type="text" /></div>
+      <div class="field-row">
+        <div class="field"><label>Departamento</label><input id="d-dept" type="text" /></div>
+        <div class="field"><label>Solicitado por</label><input id="d-req" type="text" /></div>
+      </div>
+      <div class="field"><label>Estado</label>
+        <select id="d-status">
+          <option value="Pendiente">Pendiente</option>
+          <option value="En proceso">En proceso</option>
+          <option value="Completada">Completada</option>
+          <option value="Urgente">Urgente</option>
+          <option value="Cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="field"><label>Notas</label><textarea id="d-notes"></textarea></div>
+      <div id="d-email-preview" style="display:none">
+        <hr class="divider" />
+        <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Correo original</div>
+        <div id="d-email-subject" style="font-size:13px;font-weight:500;margin-bottom:4px"></div>
+        <div id="d-email-body" style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;max-height:120px;overflow-y:auto;white-space:pre-wrap;font-family:'DM Mono',monospace;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteTicket()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        Eliminar
+      </button>
+      <button class="btn btn-primary" onclick="saveDetail()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let tickets = [];
+let nextId = 1;
+let detailIdx = -1;
+let config = {
+  tenantId: '7254b8cd-2f8a-46df-bbb5-9bd7df4153ba',
+  clientId: 'a997745c-99a3-4b7a-a929-eac00615571d',
+  clientSecret: 'ed08Q~tpGxlI3BhpspQKvxkG0ZoYdlFSd4HLobmI',
+  email: 'jnavarroh@maipu.cl',
+  keywords: ['solicitud cuenta', 'correo electrónico', 'crear correo', 'nueva cuenta', 'cuenta de correo', 'solicito correo', 'alta de correo'],
+  lastSync: null
+};
+
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('gmc_tickets', JSON.stringify(tickets));
+  localStorage.setItem('gmc_nextId', nextId);
+  localStorage.setItem('gmc_config', JSON.stringify(config));
+}
+
+function load() {
+  try {
+    const t = localStorage.getItem('gmc_tickets');
+    const n = localStorage.getItem('gmc_nextId');
+    const c = localStorage.getItem('gmc_config');
+    if (t) tickets = JSON.parse(t);
+    if (n) nextId = parseInt(n);
+    if (c) config = { ...config, ...JSON.parse(c) };
+  } catch(e) {}
+}
+
+// ─── UI HELPERS ──────────────────────────────────────────────────────────────
+function toast(msg, dur = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function showPage(p) {
+  document.getElementById('page-tickets').style.display = p === 'tickets' ? '' : 'none';
+  document.getElementById('page-config').style.display = p === 'config' ? '' : 'none';
+  document.querySelectorAll('.nav-item').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && p === 'tickets') || (i === 1 && p === 'config'));
+  });
+  if (p === 'config') loadConfigForm();
+}
+
+function openModal(m) {
+  document.getElementById('modal-' + m + '-overlay').classList.add('open');
+}
+function closeModal(m) {
+  document.getElementById('modal-' + m + '-overlay').classList.remove('open');
+}
+
+function pillClass(s) {
+  return { 'Pendiente':'pill-pending','En proceso':'pill-progress','Completada':'pill-done','Urgente':'pill-urgent','Cancelada':'pill-cancelled' }[s] || 'pill-pending';
+}
+
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('es-CL', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ─── STATS ───────────────────────────────────────────────────────────────────
+function updateStats() {
+  const total = tickets.length;
+  const pending = tickets.filter(t => t.status === 'Pendiente').length;
+  const progress = tickets.filter(t => t.status === 'En proceso').length;
+  const done = tickets.filter(t => t.status === 'Completada').length;
+  const urgent = tickets.filter(t => t.status === 'Urgente').length;
+  const auto = tickets.filter(t => t.source === 'email').length;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-pending').textContent = pending;
+  document.getElementById('s-progress').textContent = progress;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-urgent').textContent = urgent;
+  document.getElementById('s-auto').textContent = auto;
+  document.getElementById('badge-pending').textContent = pending + urgent;
+  document.getElementById('disp-auto').textContent = auto;
+}
+
+// ─── DEPT FILTER ─────────────────────────────────────────────────────────────
+function updateDeptFilter() {
+  const sel = document.getElementById('f-dept');
+  const cur = sel.value;
+  const depts = [...new Set(tickets.map(t => t.dept).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos los depto.</option>' + depts.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('');
+}
+
+// ─── RENDER TICKETS ──────────────────────────────────────────────────────────
+function renderTickets() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fs = document.getElementById('f-status').value;
+  const fd = document.getElementById('f-dept').value;
+  const fsrc = document.getElementById('f-source').value;
+  const order = { 'Urgente':0,'En proceso':1,'Pendiente':2,'Completada':3,'Cancelada':4 };
+  let list = [...tickets]
+    .sort((a,b) => (order[a.status]??2)-(order[b.status]??2) || a.ts-b.ts)
+    .map((t,_,__) => ({ t, idx: tickets.indexOf(t) }));
+  if (q) list = list.filter(({t}) => (t.name+t.email+t.dept+t.requester+'').toLowerCase().includes(q));
+  if (fs) list = list.filter(({t}) => t.status === fs);
+  if (fd) list = list.filter(({t}) => t.dept === fd);
+  if (fsrc) list = list.filter(({t}) => t.source === fsrc);
+  const el = document.getElementById('ticket-list');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg><p>No hay solicitudes que coincidan</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(({t, idx}) => {
+    const done = t.status === 'Completada';
+    return `<div class="ticket${t.status==='Urgente'?' is-urgent':''}${done?' is-done':''}" onclick="openDetail(${idx})">
+      <div class="ticket-top">
+        <div class="ticket-info">
+          <div class="ticket-meta">
+            <span class="pill ${pillClass(t.status)}">${t.status}</span>
+            ${t.source==='email'?'<span class="pill pill-auto">Auto</span>':''}
+            <span class="ticket-id">#${t.id}</span>
+          </div>
+          <div class="ticket-name" style="${done?'text-decoration:line-through':''}">${t.name}</div>
+          <div class="ticket-email">${t.email}</div>
+        </div>
+        <button class="check-btn${done?' checked':''}" onclick="event.stopPropagation();toggleDone(${idx})" title="${done?'Desmarcar':'Marcar completada'}">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        </button>
+      </div>
+      <div class="ticket-footer">
+        <span class="ticket-dept">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 10v11M12 10v11M16 10v11"/></svg>
+          ${t.dept || '—'}
+        </span>
+        <span class="ticket-date">${fmtDate(t.ts)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── NEW TICKET ───────────────────────────────────────────────────────────────
+function saveNew() {
+  const name = document.getElementById('n-name').value.trim();
+  const email = document.getElementById('n-email').value.trim();
+  const dept = document.getElementById('n-dept').value.trim();
+  if (!name || !email || !dept) { toast('⚠️ Completa los campos obligatorios (*)'); return; }
+  tickets.push({
+    id: nextId++, name, email, dept,
+    rut: document.getElementById('n-rut').value.trim(),
+    requester: document.getElementById('n-req').value.trim(),
+    notes: document.getElementById('n-notes').value.trim(),
+    status: document.getElementById('n-priority').value,
+    source: 'manual', ts: Date.now()
+  });
+  save(); updateDeptFilter(); updateStats(); renderTickets(); closeModal('new');
+  ['n-name','n-rut','n-email','n-dept','n-req','n-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('n-priority').value = 'Pendiente';
+  toast('✅ Solicitud creada');
+}
+
+// ─── TOGGLE DONE ─────────────────────────────────────────────────────────────
+function toggleDone(idx) {
+  tickets[idx].status = tickets[idx].status === 'Completada' ? 'Pendiente' : 'Completada';
+  save(); updateStats(); renderTickets();
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function openDetail(idx) {
+  detailIdx = idx;
+  const t = tickets[idx];
+  document.getElementById('d-title').textContent = t.name;
+  document.getElementById('d-id').textContent = '#' + t.id;
+  document.getElementById('d-date').textContent = fmtDate(t.ts);
+  document.getElementById('d-rut').textContent = t.rut || '—';
+  document.getElementById('d-source').innerHTML = t.source === 'email'
+    ? '<span class="pill pill-auto">Desde correo</span>'
+    : '<span class="pill pill-cancelled">Manual</span>';
+  document.getElementById('d-email').value = t.email;
+  document.getElementById('d-dept').value = t.dept || '';
+  document.getElementById('d-req').value = t.requester || '';
+  document.getElementById('d-status').value = t.status;
+  document.getElementById('d-notes').value = t.notes || '';
+  const prev = document.getElementById('d-email-preview');
+  if (t.emailSubject) {
+    prev.style.display = '';
+    document.getElementById('d-email-subject').textContent = t.emailSubject;
+    document.getElementById('d-email-body').textContent = t.emailBody || '';
+  } else { prev.style.display = 'none'; }
+  openModal('detail');
+}
+
+function saveDetail() {
+  if (detailIdx < 0) return;
+  tickets[detailIdx].email = document.getElementById('d-email').value.trim();
+  tickets[detailIdx].dept = document.getElementById('d-dept').value.trim();
+  tickets[detailIdx].requester = document.getElementById('d-req').value.trim();
+  tickets[detailIdx].status = document.getElementById('d-status').value;
+  tickets[detailIdx].notes = document.getElementById('d-notes').value;
+  save(); updateDeptFilter(); updateStats(); renderTickets(); closeModal('detail');
+  toast('✅ Cambios guardados');
+}
+
+function deleteTicket() {
+  if (detailIdx < 0) return;
+  if (!confirm('¿Eliminar esta solicitud? Esta acción no se puede deshacer.')) return;
+  tickets.splice(detailIdx, 1);
+  save(); updateDeptFilter(); updateStats(); renderTickets(); closeModal('detail');
+  toast('🗑 Solicitud eliminada');
+}
+
+// ─── MICROSOFT GRAPH SYNC ────────────────────────────────────────────────────
+async function getToken() {
+  const url = `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    scope: 'https://graph.microsoft.com/.default'
+  });
+  const res = await fetch(url, { method: 'POST', body });
+  const data = await res.json();
+  if (!data.access_token) throw new Error(data.error_description || 'Error al obtener token');
+  return data.access_token;
+}
+
+function matchesKeyword(subject, body) {
+  const text = (subject + ' ' + body).toLowerCase();
+  return config.keywords.some(k => text.includes(k.toLowerCase()));
+}
+
+function extractName(subject, body, from) {
+  const nameMatch = body.match(/nombre[:\s]+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)+)/i);
+  if (nameMatch) return nameMatch[1];
+  return from.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function extractEmail(subject, body) {
+  const m = body.match(/correo[:\s]+([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i)
+    || body.match(/([a-z0-9._%+-]+@maipu\.cl)/i);
+  return m ? m[1] : '';
+}
+
+function extractDept(body) {
+  const m = body.match(/(?:departamento|depto|unidad|área|area|dirección)[:\s]+([^\n,\.]{3,40})/i);
+  return m ? m[1].trim() : '';
+}
+
+async function syncMail() {
+  if (!config.tenantId || !config.clientId || !config.clientSecret) {
+    toast('⚠️ Configura las credenciales primero'); showPage('config'); return;
+  }
+  const btn = document.getElementById('sync-btn');
+  const icon = document.getElementById('sync-icon');
+  const bar = document.getElementById('sync-bar');
+  btn.disabled = true;
+  icon.classList.add('spin');
+  bar.style.display = 'flex';
+  document.getElementById('sync-msg').textContent = 'Obteniendo token de acceso...';
+  try {
+    const token = await getToken();
+    document.getElementById('sync-msg').textContent = 'Leyendo bandeja de entrada...';
+    const since = config.lastSync ? `&$filter=receivedDateTime ge ${new Date(config.lastSync).toISOString()}` : '';
+    const res = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${config.email}/messages?$top=50&$select=subject,from,receivedDateTime,bodyPreview,body${since}`,
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    const data = await res.json();
+    if (!data.value) throw new Error(data.error?.message || 'Error al leer correos');
+    let newCount = 0;
+    const existingIds = new Set(tickets.filter(t=>t.emailId).map(t=>t.emailId));
+    for (const msg of data.value) {
+      if (existingIds.has(msg.id)) continue;
+      const subject = msg.subject || '';
+      const body = msg.bodyPreview || '';
+      const from = msg.from?.emailAddress?.address || '';
+      if (!matchesKeyword(subject, body)) continue;
+      const name = extractName(subject, body, from);
+      const emailSol = extractEmail(subject, body);
+      const dept = extractDept(body);
+      tickets.push({
+        id: nextId++,
+        name,
+        email: emailSol || '(ver correo)',
+        dept: dept || '(ver correo)',
+        rut: '',
+        requester: from,
+        notes: '',
+        status: subject.toLowerCase().includes('urgent') ? 'Urgente' : 'Pendiente',
+        source: 'email',
+        emailId: msg.id,
+        emailSubject: subject,
+        emailBody: msg.bodyPreview,
+        ts: new Date(msg.receivedDateTime).getTime()
+      });
+      newCount++;
+    }
+    config.lastSync = Date.now();
+    save(); updateDeptFilter(); updateStats(); renderTickets();
+    const timeStr = new Date().toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('sync-time').textContent = timeStr;
+    document.getElementById('disp-sync').textContent = timeStr;
+    document.getElementById('sync-msg').textContent = newCount > 0
+      ? `✅ ${newCount} nueva(s) solicitud(es) detectada(s)`
+      : '✅ Sin nuevas solicitudes en bandeja';
+    setTimeout(() => { bar.style.display = 'none'; }, 4000);
+    toast(newCount > 0 ? `📧 ${newCount} nuevo(s) ticket(s) desde correo` : '📭 Sin novedades en bandeja');
+  } catch(e) {
+    document.getElementById('sync-msg').textContent = '❌ Error: ' + e.message;
+    toast('❌ Error de conexión: ' + e.message, 5000);
+    setTimeout(() => { bar.style.display = 'none'; }, 5000);
+  }
+  btn.disabled = false;
+  icon.classList.remove('spin');
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function loadConfigForm() {
+  document.getElementById('cfg-tenant').value = config.tenantId || '';
+  document.getElementById('cfg-client').value = config.clientId || '';
+  document.getElementById('cfg-secret').value = config.clientSecret || '';
+  document.getElementById('cfg-email').value = config.email || '';
+  document.getElementById('disp-tenant').textContent = config.tenantId ? config.tenantId.slice(0,8)+'...' : '—';
+  document.getElementById('disp-client').textContent = config.clientId ? config.clientId.slice(0,8)+'...' : '—';
+  document.getElementById('disp-email').textContent = config.email || '—';
+  document.getElementById('disp-sync').textContent = config.lastSync ? new Date(config.lastSync).toLocaleString('es-CL') : 'Nunca';
+  renderKeywords();
+}
+
+function saveConfig() {
+  config.tenantId = document.getElementById('cfg-tenant').value.trim();
+  config.clientId = document.getElementById('cfg-client').value.trim();
+  config.clientSecret = document.getElementById('cfg-secret').value.trim();
+  config.email = document.getElementById('cfg-email').value.trim();
+  save(); loadConfigForm(); toast('✅ Configuración guardada');
+}
+
+async function testConnection() {
+  config.tenantId = document.getElementById('cfg-tenant').value.trim();
+  config.clientId = document.getElementById('cfg-client').value.trim();
+  config.clientSecret = document.getElementById('cfg-secret').value.trim();
+  try {
+    toast('🔄 Probando conexión...');
+    await getToken();
+    toast('✅ Conexión exitosa con Microsoft Graph');
+  } catch(e) {
+    toast('❌ Fallo: ' + e.message, 5000);
+  }
+}
+
+function renderKeywords() {
+  document.getElementById('keywords-list').innerHTML = config.keywords.map((k,i) =>
+    `<div class="tag">${k}<button onclick="removeKeyword(${i})" title="Eliminar">×</button></div>`
+  ).join('');
+}
+
+function addKeyword() {
+  const val = document.getElementById('new-keyword').value.trim();
+  if (!val) return;
+  config.keywords.push(val);
+  document.getElementById('new-keyword').value = '';
+  save(); renderKeywords();
+}
+
+function removeKeyword(i) {
+  config.keywords.splice(i, 1);
+  save(); renderKeywords();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load();
+updateDeptFilter();
+updateStats();
+renderTickets();
+</script>
+</body>
+</html>
