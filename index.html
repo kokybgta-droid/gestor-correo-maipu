@@ -599,14 +599,15 @@ function deleteTicket() {
 
 // ─── MICROSOFT GRAPH SYNC ────────────────────────────────────────────────────
 async function getToken() {
-  const url = `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`;
+  const PROXY = 'https://graph-proxy-maipu.kokybgta.workers.dev/';
   const body = new URLSearchParams({
+    tenant: config.tenantId,
     grant_type: 'client_credentials',
     client_id: config.clientId,
     client_secret: config.clientSecret,
     scope: 'https://graph.microsoft.com/.default'
   });
-  const res = await fetch(url, { method: 'POST', body });
+  const res = await fetch(PROXY, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
   const data = await res.json();
   if (!data.access_token) throw new Error(data.error_description || 'Error al obtener token');
   return data.access_token;
